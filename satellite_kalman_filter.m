@@ -3,13 +3,13 @@
 %% Parameters
 n = 6;      % number of dimensions
 dt = 1;     % seconds
-simTime = 30; % seconds
+simTime = 60; % seconds
 tspan = 0:dt:simTime;
 numsteps = length(tspan);
 R = 10000; % radius of earth
 
 % initial conditions
-r0 = [0, 1, 0, 0, 0, 0];
+r0 = [0, 100, 0, 0, 0, 0];
 
 % motion model dynamics
 A = [1 dt 0 0  0 0;
@@ -25,10 +25,10 @@ H = [1 0 0 0 0 0;
      0 0 0 0 1 0;];
 
 % process noise covariance
-Cw = 0.05;
+Cw = 5;
 B = diag(ones(1,n));
 % measurement noise covariance
-Cv = 0.01;
+Cv = 1;
 
 
 % initialize vectors
@@ -51,10 +51,13 @@ for i = 1:numsteps-1 % Kalman Loop
     %%% DYNAMICS UPDATE %%%
     % get latest apriori
     xk_apriori = A*r_estimate(:,i);
+    
+    % update true state
+    r_true(:,i+1) = A*r_true(:,i) + B*randn(n,1)*sqrt(Cw);
 
     %%% OBSERVATION UPDATE %%%
     % calculate satellite observation y
-    yk = H*r_true(:,i) + randn(3,1)*sqrt(Cv);
+    yk = H*r_true(:,i+1) + randn(3,1)*sqrt(Cv);
     y(:,i) = yk;
     
     % Kalman gain
@@ -69,7 +72,6 @@ for i = 1:numsteps-1 % Kalman Loop
 
     % update states
     r_nominal(:,i+1) = A*r_nominal(:,i);
-    r_true(:,i+1) = A*r_true(:,i) + B*randn(n,1)*sqrt(Cw);
     r_estimate(:,i+1) = xk_apost;
 
     % update covariances
