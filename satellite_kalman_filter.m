@@ -10,8 +10,6 @@ R = 10000; % radius of earth
 
 % initial conditions
 r0 = [0, 1, 0, 0, 0, 0];
-% (NOTE: x is ERROR in this case, so initial error is 0)
-x0 = [0; 0; 0; 0; 0; 0;];
 
 % motion model dynamics
 A = [1 dt 0 0  0 0;
