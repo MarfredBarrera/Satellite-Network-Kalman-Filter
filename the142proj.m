@@ -41,9 +41,9 @@ plot3(x6,y6,z6,'-','color','blue',LineWidth=3)
 
 
 %% Choose satelite locations
-P1 = [7000 1300 2800];
-P2 = [7200 500 1100];
-P3 = [7300 2500 1500];
+P1 = [7000 1300 2800]';
+P2 = [7200 500 1100]';
+P3 = [7300 2500 1500]';
 scatter3(P1(1),P1(2),P1(3),'o','blue','LineWidth',4)
 scatter3(P2(1),P2(2),P2(3),'o','green','LineWidth',4)
 scatter3(P3(1),P3(2),P3(3),'o','magenta','LineWidth',4)
@@ -71,7 +71,39 @@ for i = 2:length(t)
     x(:,i) = x(:,i-1)+v*delT;
 end
 
+%% Measurement dynamics 
 
+%% Given
+% Position of each satellite
+R_sat = [P1' P2' P3'];
+
+% speed of light
+c = 299792; %km/s
+
+H = zeros(3,3);
+for i = 1:3
+    d(:,i) = abs(R_sat(:,i) - ro'); % [3x3] matrix which contains distance decomposition [d1(x;y;z) d2(x;y;z) d3(x;y;z)] between each satellite and the aircraft
+
+    % denom(i) = sqrt( (R_ac(1)-R_sat(1,i))^2 + (R_ac(2)-R_sat(2,i))^2 + (R_ac(3)-R_sat(3,i))^2 ) ; 
+    denom(i) = sqrt( (d(1,i)^2 + d(2,i)^2 + d(3,i)^2)); % [1x3] matrix of magnitude of distance from each of the satellites
+
+    % H(i,:) = [ (R_sat(1,i)-R_ac(1))/denom(i) (R_sat(2,i)-R_ac(2))/denom(i)  (R_sat(3,i)-R_ac(3))/denom(i) ];
+    H(i,:) = [ d(1,i)/denom(i) d(2,i)/denom(i)  d(3,i)/denom(i) ];
+end
+
+H = H./c;
+H(:,4) = 1;
+
+H_6 = [1 0 0 0 0 0;
+         0 1 0 0 0 0;
+         0 0 1 0 0 0;
+         0 0 0 0 0 0];
+
+H_aug= H *([0;0;0;1] + H_6*[ro(1); ro(2); ro(3); 5; -30; 25]);
+
+% H = [H_aug(1) 0 0 0 0 0;
+%      0 0 H_aug(2) 0 0 0;
+%      0 0 0 0 H_aug(3) 0;];
 
 %% Generic Kalman filter
 %% Parameters
@@ -93,10 +125,10 @@ A = [1 dt 0 0  0 0;
      0 0  0 0  1 dt; 
      0 0  0 0  0 1];
 
-% measurement dynamics
-H = [1 0 0 0 0 0;
-     0 0 1 0 0 0;
-     0 0 0 0 1 0;];
+% % measurement dynamics
+H = [H_aug(1) 0 0 0 0 0;
+     0 0 H_aug(2) 0 0 0;
+     0 0 0 0 H_aug(3) 0;];
 
 % process noise covariance
 Cw = 5;
