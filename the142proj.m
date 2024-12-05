@@ -50,17 +50,19 @@ scatter3(P3(1),P3(2),P3(3),'o','magenta','LineWidth',4)
 
 %initial state vector
 [x0,y0,z0] = sph2cart(28.*pi./180,5.*pi./180,R+100);
-x0 = [x0 y0 z0]';
-v0 = zeros(0,3);
+ro = [x0 y0 z0]';
 
 %dynamics model, constant linear velocty
-v = [5; -30; 25];
+vx = 5;
+vy = -30;
+vz = 25;
+v = [vx; vy; vz];
 v0 = v;
 x = zeros(3,31);
-x(:,1) = x0;
+x(:,1) = ro;
 %determine simulation time
 dt = 1;
-simTime = 30; % seconds
+simTime = 60; % seconds
 t = 0:dt:simTime;
 %t = linspace(0,100,50);
 delT = dt; %time step
@@ -69,76 +71,19 @@ for i = 2:length(t)
     x(:,i) = x(:,i-1)+v*delT;
 end
 
-%% Calculate pseudoranges
-%Using dynamics, get what the new postition should be with some added
-%error.
-%Find the pseudoranges via the simulation location.
 
-plot3(x(1,:),x(2,:),x(3,:),'cyan',"LineWidth",3);
-
-% 
-% for i = 1:length(t)
-%     pr1(i) = norm([P1(1)-x(1,i),P1(2)-x(2,i),P1(3)-x(3,i)]);
-%     pr2(i) = norm([P2(1)-x(1,i),P2(2)-x(2,i),P2(3)-x(3,i)]);
-%     pr3(i) = norm([P3(1)-x(1,i),P3(2)-x(2,i),P3(3)-x(3,i)]);
-% 
-% end
-% 
-% %% Estimate Receiver Position from Pseudoranges and Satellite Positions
-% %Trilateration
-% 
-% Cord1 = ones(3,length(t));
-% Cord2 = ones(3,length(t));
-% for i = 1:length(t)
-%     [Cord1(:,i),Cord2(:,i)] = trilat(P1,P2,P3,pr1(i),pr2(i),pr3(i));
-% end
-% 
-% plot3(Cord1(:,1),Cord1(:,2),Cord1(:,3));
-% plot3(Cord2(:,1),Cord2(:,2),Cord2(:,3));
-% legend("actual","cord1","cord2")
-% disp("end")
-% 
-% function [K1,K2] = trilat(P1, P2, P3, r1, r2, r3)
-% 
-%   p1 = [0, 0, 0];
-%   p2 = [P2(1) - P1(1), P2(2) - P1(2), P2(3) - P1(3)];
-%   p3 = [P3(1) - P1(1), P3(2) - P1(2), P3(3) - P1(3)];
-%   v1 = p2 - p1;
-%   v2 = p3 - p1;
-% 
-%   Xn = (v1)/norm(v1);
-% 
-%   tmp = cross(v1, v2);
-% 
-%   Zn = tmp/norm(tmp);
-% 
-%   Yn = cross(Xn, Zn);
-% 
-%   i = dot(Xn, v2);
-%   d = dot(Xn, v1);
-%   j = dot(Yn, v2);
-% 
-%   X = ((r1^2)-(r2^2)+(d^2))/(2*d);
-%   Y = (((r1^2)-(r3^2)+(i^2)+(j^2))/(2*j))-((i/j)*(X));
-%   Z1 = sqrt(max(0, r1^2-X^2-Y^2));
-%   Z2 = -Z1;
-% 
-%   K1 = P1 + X * Xn + Y * Yn + Z1 * Zn;
-%   K2 = P1 + X * Xn + Y * Yn + Z2 * Zn;
-% end
 
 %% Generic Kalman filter
-
 %% Parameters
 n = 6;      % number of dimensions
 dt = 1;     % seconds
-simTime = 30; % seconds
+simTime = 60; % seconds
 tspan = 0:dt:simTime;
 numsteps = length(tspan);
 %R = 10000; % radius of earth
 
 % initial conditions
-r0 = [x0(1), x0(2), x0(3), 5, -30, 25];
+r0 = [x0, vx, y0, vy, z0, vz];
 
 % motion model dynamics
 A = [1 dt 0 0  0 0;
@@ -149,16 +94,15 @@ A = [1 dt 0 0  0 0;
      0 0  0 0  0 1];
 
 % measurement dynamics
-% H = [1 0 0 0 0 0;
-%      0 0 1 0 0 0;
-%      0 0 0 0 1 0;];
-H = [1 0 0 0 0 0; 0 1 0 0 0 0; 0 0 1 0 0 0];
+H = [1 0 0 0 0 0;
+     0 0 1 0 0 0;
+     0 0 0 0 1 0;];
 
 % process noise covariance
-Cw = 0.05;
+Cw = 5;
 B = diag(ones(1,n));
 % measurement noise covariance
-Cv = 0.01;
+Cv = 1;
 
 
 % initialize vectors
@@ -181,10 +125,13 @@ for i = 1:numsteps-1 % Kalman Loop
     %%% DYNAMICS UPDATE %%%
     % get latest apriori
     xk_apriori = A*r_estimate(:,i);
+    
+    % update true state
+    r_true(:,i+1) = A*r_true(:,i) + B*randn(n,1)*sqrt(Cw);
 
     %%% OBSERVATION UPDATE %%%
     % calculate satellite observation y
-    yk = H*r_true(:,i) + randn(3,1)*sqrt(Cv); %r_true = z_k?
+    yk = H*r_true(:,i+1) + randn(3,1)*sqrt(Cv);
     y(:,i) = yk;
     
     % Kalman gain
@@ -199,16 +146,36 @@ for i = 1:numsteps-1 % Kalman Loop
 
     % update states
     r_nominal(:,i+1) = A*r_nominal(:,i);
-    r_true(:,i+1) = A*r_true(:,i) + B*randn(n,1)*sqrt(Cw);
     r_estimate(:,i+1) = xk_apost;
 
     % update covariances
     M(:,:,i+1) = A*Pk*A' + B*Cw*B';
-
 end
 
-plot3(r_true(1,:),r_true(2,:),r_true(3,:),'red',"LineWidth",3)
+%% Trajectory plots
+plot3(r_nominal(1,:),r_nominal(3,:),r_nominal(5,:),'cyan',"LineWidth",4)
+%plot3(x(1,:),x(2,:),x(3,:),"red","LineWidth",4); sanity check
+% plot3(r_estimate(1,:),r_estimate(3,:),r_estimate(5,:),'red',"LineWidth",4)
+% plot3(r_true(1,:),r_true(3,:),r_true(5,:),'green',"LineWidth",4)
+% legend("Nomnial","Estimate","True")
 
+%Mean square error:
+error2x = (r_nominal(1,:)-r_true(1,:)).^2;
+sumx = cumsum(error2x);
+meansquarex = sumx./length(error2x);
+error2y = (r_nominal(3,:)-r_true(3,:)).^2;
+sumy = cumsum(error2y);
+meansquarey = sumy./length(error2y);
+error2z = (r_nominal(5,:)-r_true(5,:)).^2;
+sumz = cumsum(error2z);
+meansquarez = sumz./length(error2z);
+meansquare = [sumx; sumy; sumz];
+figure()
+plot(t,meansquarex,'red')
+hold on
+plot(t,meansquarey,'blue')
+plot(t,meansquarez,'green')
+legend("X Error","Y Error","Z Error")
+title("Mean Square Error of Position")
 
-
-disp("done")
+disp("done");
