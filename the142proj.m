@@ -155,27 +155,45 @@ end
 %% Trajectory plots
 plot3(r_nominal(1,:),r_nominal(3,:),r_nominal(5,:),'cyan',"LineWidth",4)
 %plot3(x(1,:),x(2,:),x(3,:),"red","LineWidth",4); sanity check
-% plot3(r_estimate(1,:),r_estimate(3,:),r_estimate(5,:),'red',"LineWidth",4)
-% plot3(r_true(1,:),r_true(3,:),r_true(5,:),'green',"LineWidth",4)
-% legend("Nomnial","Estimate","True")
+plot3(r_estimate(1,:),r_estimate(3,:),r_estimate(5,:),'red',"LineWidth",4)
+plot3(r_true(1,:),r_true(3,:),r_true(5,:),'green',"LineWidth",4)
+legend("Nomnial = Cyan","Estimate = Red","True = Green")
 
-%Mean square error:
-error2x = (r_nominal(1,:)-r_true(1,:)).^2;
+%Mean square error in estimate:
+error2x = (r_estimate(1,:)-r_true(1,:)).^2;
 sumx = cumsum(error2x);
 meansquarex = sumx./length(error2x);
-error2y = (r_nominal(3,:)-r_true(3,:)).^2;
+error2y = (r_estimate(3,:)-r_true(3,:)).^2;
 sumy = cumsum(error2y);
 meansquarey = sumy./length(error2y);
-error2z = (r_nominal(5,:)-r_true(5,:)).^2;
+error2z = (r_estimate(5,:)-r_true(5,:)).^2;
 sumz = cumsum(error2z);
 meansquarez = sumz./length(error2z);
-meansquare = [sumx; sumy; sumz];
 figure()
-plot(t,meansquarex,'red')
+% plot(t,meansquarex,'red')
+% hold on
+% plot(t,meansquarey,'blue')
+% plot(t,meansquarez,'green')
+% legend("X Error","Y Error","Z Error")
+meansquaremag = sqrt(meansquarex.^2+meansquarey.^2+meansquarez.^2);
+
+%Mean square error in estimate:
+error3x = (r_nominal(1,:)-r_true(1,:)).^2;
+sumx2 = cumsum(error3x);
+meansquarex2 = sumx2./length(error3x);
+error3y = (r_nominal(3,:)-r_true(3,:)).^2;
+sumy2 = cumsum(error2y);
+meansquarey2 = sumy2./length(error2y);
+error3z = (r_nominal(5,:)-r_true(5,:)).^2;
+sumz2 = cumsum(error2z);
+meansquarez2 = sumz2./length(error2z);
+meansquaremag2 = sqrt(meansquarex2.^2+meansquarey2.^2+meansquarez2.^2);
+
+plot(t,meansquaremag);
 hold on
-plot(t,meansquarey,'blue')
-plot(t,meansquarez,'green')
-legend("X Error","Y Error","Z Error")
+plot(t,meansquaremag2);
 title("Mean Square Error of Position")
+xlabel("Time [seconds]")
+ylabel("Mean Square Error of Position")
 
 disp("done");
